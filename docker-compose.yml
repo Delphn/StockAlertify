@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_LISTENERS=PLAINTEXT://:9092
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    depends_on:
+      - zookeeper
+
+  nestjs-producer:
+    build:
+      context: ./nestjs-producer
+    container_name: nestjs-producer
+    ports:
+      - "3001:3001"
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - KAFKA_TOPIC=stock-updates
+    depends_on:
+      - kafka
+
+  nestjs-consumer:
+    build:
+      context: ./nestjs-consumer
+    container_name: nestjs-consumer
+    ports:
+      - "3002:3002"
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - KAFKA_TOPIC=stock-updates
+      - KAFKA_NOTIFICATIONS_TOPIC=notifications
+    depends_on:
+      - kafka
+
+  vue-admin-panel:
+    build:
+      context: ./vue-admin-panel
+    container_name: vue-admin-panel
+    ports:
+      - "8080:80"
+    depends_on:
+      - nestjs-consumer

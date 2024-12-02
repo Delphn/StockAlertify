@@ -1,0 +1,19 @@
+{
+  "name": "stockalertify",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Delphn/StockAlertify.git"
+  },
+  "author": "Delphin Rukundo",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Delphn/StockAlertify/issues"
+  },
+  "homepage": "https://github.com/Delphn/StockAlertify#readme",
+  "description": ""
+}
