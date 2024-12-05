@@ -1,16 +1,15 @@
-import { Controller, Logger } from '@nestjs/common'
+import { Controller } from '@nestjs/common'
 import { EventPattern, Payload } from '@nestjs/microservices'
-import { StockService } from '../services/stock.service'
+import { Stock, StockService } from '../services/stock.service'
 
 @Controller()
 export class StockController {
-  private readonly logger = new Logger(StockController.name)
 
   constructor(private readonly stockService: StockService) {}
 
-  @EventPattern(process.env.KAFKA_TOPIC)
-  async handleStockUpdate(@Payload() message: any) {
-    this.logger.log(`Received message: ${JSON.stringify(message)}`)
+  @EventPattern('stock-updates')
+  async handleStockUpdate(message: any) {
+    console.log(`Received message: ${JSON.stringify(message)}`)
     await this.stockService.processStockUpdate(message)
   }
 }

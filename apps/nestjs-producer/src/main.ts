@@ -1,25 +1,21 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { Logger } from '@nestjs/common';
-import { KafkaConfigService } from './config/kafka-config.service';
+import { NestFactory } from '@nestjs/core'
+import { AppModule } from './app.module'
+import { MicroserviceOptions } from '@nestjs/microservices'
+import { KafkaConfigService } from './kafka/service/kafka.service'
+import { ConfigService } from '@nestjs/config'
 
 async function bootstrap() {
-  const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule);
-  
-  try {
-    const kafkaConfigService = app.get(KafkaConfigService);
-    app.connectMicroservice(kafkaConfigService.getKafkaConfig());
-    
-    await app.startAllMicroservices();
-    await app.listen(process.env.NESTJS_PRODUCER_PORT ?? 3000);
-    
-    logger.log(`Application is running on: ${await app.getUrl()}`);
-    logger.log('Kafka microservice is running');
-  } catch (error) {
-    logger.error('Failed to start the application', error);
-    throw error;
-  }
+  const kafkaConfigService = new KafkaConfigService(new ConfigService())
+
+  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
+    AppModule,
+    {
+      transport: kafkaConfigService.getKafkaConfig().transport,
+      options: kafkaConfigService.getKafkaConfig().options
+    }
+  )
+
+  await app.listen()
 }
 
-bootstrap();
+bootstrap()

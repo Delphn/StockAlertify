@@ -1,14 +1,20 @@
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
-import { KafkaConfigService } from './config/kafka-config.service'
+import { KafkaConfigService } from './kafka/service/kafka.service'
+import { MicroserviceOptions } from '@nestjs/microservices'
+import { ConfigService } from '@nestjs/config'
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const kafkaConfigService = new KafkaConfigService(new ConfigService())
 
-  const kafkaConfigService = app.get(KafkaConfigService);
-  app.connectMicroservice(kafkaConfigService.getKafkaConfig());
+  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
+    AppModule,
+    {
+      transport: kafkaConfigService.getKafkaConfig().transport,
+      options: kafkaConfigService.getKafkaConfig().options
+    }
+  )
 
-  await app.startAllMicroservices();
-  await app.listen(3000);
+  await app.listen()
 }
-bootstrap();
+bootstrap()

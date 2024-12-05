@@ -1,22 +1,21 @@
 import { Injectable } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { KafkaOptions, Transport } from '@nestjs/microservices'
 
 @Injectable()
 export class KafkaConfigService {
+  constructor(private readonly configService: ConfigService) {}
 
   getKafkaConfig(): KafkaOptions {
     return {
       transport: Transport.KAFKA,
       options: {
         client: {
-          clientId: process.env.KAFKA_CLIENT_ID || 'stock-consumer',
-          brokers: (process.env.KAFKA_BROKERS || 'localhost:9092').split(',')
+          clientId: this.configService.get<string>('KAFKA_CLIENT_ID'),
+          brokers: this.configService.get<string>('KAFKA_BROKERS').split(',')
         },
         consumer: {
-          groupId: process.env.KAFKA_CONSUMER_GROUP || 'stock-consumer-group'
-        },
-        subscribe: {
-          fromBeginning: true
+          groupId: this.configService.get<string>('KAFKA_CONSUMER_GROUP')
         }
       }
     }
