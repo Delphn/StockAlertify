@@ -1,86 +1,57 @@
 services:
-  zookeeper:
-    image: bitnami/zookeeper:latest
-    healthcheck:
-      test: [ "CMD-SHELL", "echo srvr | nc localhost 2181 || exit 1" ]
-      interval: 10s
-      timeout: 10s
-      retries: 10
+  kafka:
+    image: bitnami/kafka:3.9
+    container_name: kafka
     ports:
-      - "2181:2181"
+      - "${KAFKA_PORT}:${KAFKA_PORT}"
+    volumes:
+      - kafka_data:/bitnami
     environment:
-      - ALLOW_ANONYMOUS_LOGIN=${ALLOW_ANONYMOUS_LOGIN}
-    env_file:
-      - .env
-      - .env.${NODE_ENV}
+      # KRaft settings
+      - KAFKA_CFG_NODE_ID=${KAFKA_CFG_NODE_ID}
+      - KAFKA_CFG_PROCESS_ROLES=${KAFKA_CFG_PROCESS_ROLES}
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=${KAFKA_CFG_CONTROLLER_QUORUM_VOTERS}
+      # Listeners
+      - KAFKA_CFG_LISTENERS=${KAFKA_CFG_LISTENERS}
+      - KAFKA_CFG_ADVERTISED_LISTENERS=${KAFKA_CFG_ADVERTISED_LISTENERS}
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=${KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP}
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=${KAFKA_CFG_CONTROLLER_LISTENER_NAMES}
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=${KAFKA_CFG_INTER_BROKER_LISTENER_NAME}
+
     networks:
       - kafka-network
     restart: unless-stopped
 
-  kafka:
-    image: bitnami/kafka:latest
-    healthcheck:
-      test: [ "CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:${KAFKA_PORT:-9092} --list || exit 1" ]
-      interval: 30s
-      timeout: 30s
-      retries: 5
-      start_period: 45s
-    depends_on:
-      zookeeper:
-        condition: service_healthy
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+
     ports:
-      - "9092:9092"
+      - "${KAFKA_UI_PORT}:${KAFKA_UI_PORT}"
     environment:
-      - KAFKA_BROKER_ID=${KAFKA_BROKER_ID}
-      - KAFKA_ZOOKEEPER_CONNECT=${KAFKA_ZOOKEEPER_CONNECT}
-      - KAFKA_ADVERTISED_LISTENERS=${KAFKA_ADVERTISED_LISTENERS}
-      - KAFKA_LISTENERS=${KAFKA_LISTENERS}
-      - ALLOW_PLAINTEXT_LISTENER=${ALLOW_PLAINTEXT_LISTENER}
-      - KAFKA_AUTO_TOPIC_CREATION=${KAFKA_AUTO_TOPIC_CREATION}
-      - KAFKA_CFG_NUM_PARTITIONS=3
-      - KAFKA_CFG_DEFAULT_REPLICATION_FACTOR=1
-      - KAFKA_CFG_MIN_INSYNC_REPLICAS=1
-      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
-      - KAFKA_CFG_ZOOKEEPER_CONNECTION_TIMEOUT_MS=60000
-      - KAFKA_CFG_ZOOKEEPER_SESSION_TIMEOUT_MS=60000
-      - KAFKA_CFG_GROUP_INITIAL_REBALANCE_DELAY_MS=3000
-      - KAFKA_CFG_OFFSETS_TOPIC_NUM_PARTITIONS=1
-      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=1
-      - KAFKA_CFG_LOG_RETENTION_HOURS=168
-    env_file:
-      - .env
-      - .env.${NODE_ENV}
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:${KAFKA_PORT}
+    depends_on:
+      - kafka
     networks:
       - kafka-network
-    restart: unless-stopped
 
   nestjs-producer:
     build:
       context: ./apps/nestjs-producer
       dockerfile: Dockerfile
       target: ${NODE_ENV}
+    container_name: nestjs-producer
     depends_on:
-      kafka:
-        condition: service_healthy
-      zookeeper:
-        condition: service_healthy
+      - kafka
     ports:
       - "${NESTJS_PRODUCER_PORT}:${NESTJS_PRODUCER_PORT}"
     environment:
       - NODE_ENV=${NODE_ENV}
-      - KAFKA_BROKERS=kafka:${KAFKA_PORT}
-      - KAFKA_TOPIC=${KAFKA_TOPIC}
-      - KAFKA_CLIENT_ID=${KAFKA_CLIENT_ID}
-      - KAFKA_CONSUMER_GROUP=${KAFKA_CONSUMER_GROUP}
-      - KAFKA_AUTO_TOPIC_CREATION=${KAFKA_AUTO_TOPIC_CREATION}
-      - KAFKA_RETRY_ATTEMPTS=5
-      - KAFKA_RETRY_DELAY=5000
     volumes:
-      - ./apps/nestjs-producer:/usr/src/app
-      - /usr/src/app/node_modules
-    env_file:
-      - .env
-      - .env.${NODE_ENV}
+      - ./apps/nestjs-producer:/app
+      - ./.env.${NODE_ENV}:/app/.env.${NODE_ENV}
+      - /app/node_modules
     networks:
       - kafka-network
     restart: unless-stopped
@@ -90,29 +61,17 @@ services:
       context: ./apps/nestjs-consumer
       dockerfile: Dockerfile
       target: ${NODE_ENV}
+    container_name: nestjs-consumer
     depends_on:
-      kafka:
-        condition: service_healthy
-      zookeeper:
-        condition: service_healthy
+      - kafka
     ports:
       - "${NESTJS_CONSUMER_PORT}:${NESTJS_CONSUMER_PORT}"
     environment:
       - NODE_ENV=${NODE_ENV}
-      - KAFKA_BROKERS=kafka:${KAFKA_PORT}
-      - KAFKA_TOPIC=${KAFKA_TOPIC}
-      - KAFKA_NOTIFICATIONS_TOPIC=${KAFKA_NOTIFICATIONS_TOPIC}
-      - KAFKA_CLIENT_ID=${KAFKA_CLIENT_ID}
-      - KAFKA_CONSUMER_GROUP=${KAFKA_CONSUMER_GROUP}
-      - KAFKA_AUTO_TOPIC_CREATION=${KAFKA_AUTO_TOPIC_CREATION}
-      - KAFKA_RETRY_ATTEMPTS=5
-      - KAFKA_RETRY_DELAY=5000
     volumes:
       - ./apps/nestjs-consumer:/app
+      - ./.env.${NODE_ENV}:/app/.env.${NODE_ENV}
       - /app/node_modules
-    env_file:
-      - .env
-      - .env.${NODE_ENV}
     networks:
       - kafka-network
     restart: unless-stopped
@@ -122,6 +81,7 @@ services:
       context: ./apps/vue-admin-panel
       dockerfile: Dockerfile
       target: ${NODE_ENV}
+    container_name: vue-admin-panel
     volumes:
       - ./apps/vue-admin-panel:/app
       - /app/node_modules
@@ -131,27 +91,11 @@ services:
       - NODE_ENV=${NODE_ENV}
     depends_on:
       - nestjs-consumer
-    env_file:
-      - .env
-      - .env.${NODE_ENV}
-
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    ports:
-      - "8080:8080"
-    environment:
-      - KAFKA_CLUSTERS_0_NAME=local
-      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=${KAFKA_BROKERS}
-      - KAFKA_CLUSTERS_0_ZOOKEEPER=${KAFKA_ZOOKEEPER_CONNECT}
-    depends_on:
-      kafka:
-        condition: service_healthy
-    networks:
-      - kafka-network
-    env_file:
-      - .env
-      - .env.${NODE_ENV}
 
 networks:
   kafka-network:
     driver: bridge
+
+volumes:
+  kafka_data:
+    driver: local
