@@ -19,7 +19,8 @@ cp .env.example .env.development
 
 - NestJS Producer: `http://localhost:3001`
 - NestJS Consumer: `http://localhost:3002`
-- Vue Admin Panel: `http://localhost:8080`
+- Kafka UI: `http://localhost:8080`
+- Vue Admin Panel: `http://localhost:5173`
 
 ## Development Guide
 
