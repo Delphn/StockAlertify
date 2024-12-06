@@ -1,6 +1,6 @@
 import { Controller } from '@nestjs/common'
 import { EventPattern, Payload } from '@nestjs/microservices'
-import { Stock, StockService } from '../services/stock.service'
+import { Stock, StockService } from './stock.service'
 
 @Controller()
 export class StockController {

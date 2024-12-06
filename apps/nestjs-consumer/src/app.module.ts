@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config'
-import { KafkaConfigService } from './kafka/service/kafka.service'
+import { KafkaConfigService } from './kafka/kafka.service'
 import { KafkaModule } from './kafka/kafka.module'
 import { StockModule } from './stock/stock.module'
 import { ClientsModule } from '@nestjs/microservices';

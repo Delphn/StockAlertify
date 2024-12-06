@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common'
-import { StockService } from './services/stock.service'
-import { KafkaConfigService } from '../kafka/service/kafka.service'
-import { StockController } from './controllers/stock.controller'
+import { StockGateway } from './stock.gateway'
+import { StockService } from './stock.service'
+import { KafkaConfigService } from '../kafka/kafka.service'
+import { StockController } from './stock.controller'
 
 @Module({
   controllers: [StockController],
-  providers: [StockService, KafkaConfigService],
+  providers: [StockService, KafkaConfigService, StockGateway],
   exports: [StockService]
 })
 export class StockModule {}

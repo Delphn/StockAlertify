@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { OnModuleInit } from '@nestjs/common'
+import { StockGateway } from './stock.gateway'
 
 export interface Stock {
   symbol: string
@@ -11,9 +12,12 @@ export interface Stock {
 
 @Injectable()
 export class StockService implements OnModuleInit {
+  constructor(private readonly stockGateway: StockGateway) {}
+
   async onModuleInit() {}
 
   async processStockUpdate(stockUpdate: Stock) {
     console.log(`Processing stock update: ${JSON.stringify(stockUpdate)}`)
+    this.stockGateway.handleStockUpdate(stockUpdate)
   }
 }

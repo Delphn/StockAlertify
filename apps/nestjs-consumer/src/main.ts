@@ -1,20 +1,21 @@
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
-import { KafkaConfigService } from './kafka/service/kafka.service'
+import { KafkaConfigService } from './kafka/kafka.service'
 import { MicroserviceOptions } from '@nestjs/microservices'
 import { ConfigService } from '@nestjs/config'
 
 async function bootstrap() {
   const kafkaConfigService = new KafkaConfigService(new ConfigService())
 
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
-    AppModule,
-    {
-      transport: kafkaConfigService.getKafkaConfig().transport,
-      options: kafkaConfigService.getKafkaConfig().options
-    }
-  )
+  // Create HTTP server
+  const app = await NestFactory.create(AppModule)
+  app.enableCors() // Enable CORS for frontend access
 
-  await app.listen()
+  app.connectMicroservice<MicroserviceOptions>(
+    kafkaConfigService.getKafkaConfig()
+  )
+  await app.startAllMicroservices()
+
+  await app.listen(process.env.NESTJS_CONSUMER_PORT)
 }
 bootstrap()
